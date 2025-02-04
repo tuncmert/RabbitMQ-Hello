@@ -10,16 +10,24 @@ var factory = new ConnectionFactory
 using var connection = await factory.CreateConnectionAsync();
 using var channel = await connection.CreateChannelAsync();
 
-//burada tekrar kuyruk oluşturmaya gerek yok fakat eğer publisher oluşturmadıysa buradan oluşturulabilir.
-await channel.QueueDeclareAsync("hello-queue", true, false, false);
 
-//true olursa girilen sayıyı toplam mesaj sayısı olarak gönderir, false olursa her bir consumera girilen sayı kadar sırayla gönderir.
+
+QueueDeclareOk queueDeclareResult = await channel.QueueDeclareAsync();
+string randomQueueName = queueDeclareResult.QueueName;
+
+//Aşağıdaki şekilde kuyruk oluşturursak kuyruk kalıcı olur. Oluşturmazsak bağlantı gidince kuyrukta kaybolur
+//await channel.QueueDeclareAsync(randomQueueName,true,false,false);
+
+await channel.QueueBindAsync(randomQueueName, "logs-fanout", "");
+
 await channel.BasicQosAsync(0, 1, false);
 var consumer = new AsyncEventingBasicConsumer(channel);
 
-//mesaj geldiğinde hemen silinip silinmeyeği false-true
-await channel.BasicConsumeAsync("hello-queue", false, consumer);
 
+await channel.BasicConsumeAsync(randomQueueName, false, consumer);
+
+
+Console.WriteLine("Loglar alınıyor...");
 consumer.ReceivedAsync += (model, ea) =>
 {
     var body = ea.Body.ToArray();
@@ -27,7 +35,6 @@ consumer.ReceivedAsync += (model, ea) =>
     Thread.Sleep(1000);
     Console.WriteLine("Gelen mesaj: " + message);
 
-    //artık mesajı silmesi için rabbitmqye gönderiyoruz
     channel.BasicAckAsync(ea.DeliveryTag, false);
 
     return Task.CompletedTask;

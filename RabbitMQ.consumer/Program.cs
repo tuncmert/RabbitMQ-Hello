@@ -1,6 +1,8 @@
 ﻿using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using Shared;
 using System.Text;
+using System.Text.Json;
 
 var factory = new ConnectionFactory
 {
@@ -19,9 +21,9 @@ var queueDeclareResult = await channel.QueueDeclareAsync();
 var queueName = queueDeclareResult.QueueName;
 
 //sadece ortası Error olanları almak için.
-var routeKey = "*.Error.*";
+var routeKey = "contextTypeTest";
 
-channel.QueueBindAsync(queueName, "logs-topic", routeKey);
+channel.QueueBindAsync(queueName, "complex-type", "contextTypeTest");
 
 await channel.BasicConsumeAsync(queueName, false, consumer);
 
@@ -29,14 +31,10 @@ consumer.ReceivedAsync += (model, ea) =>
 {
     var body = ea.Body.ToArray();
     var message = Encoding.UTF8.GetString(body);
+    var product = JsonSerializer.Deserialize<Product>(message);
     Thread.Sleep(1000);
-    Console.WriteLine("Gelen mesaj: " + message);
+    Console.WriteLine($"Gelen mesaj: {product.Id}  {product.Name} {product.Price} {product.Stock}");
 
-    //logları bir txt dosyasına kayıt için 
-    //File.AppendAllText("log-critical.txt", message + "\n");
-
-
-    //artık mesajı silmesi için rabbitmqye gönderiyoruz
     channel.BasicAckAsync(ea.DeliveryTag, false);
 
     return Task.CompletedTask;

@@ -1,8 +1,9 @@
 ﻿
 
 using RabbitMQ.Client;
-using RabbitMQ.publisher;
+using Shared;
 using System.Text;
+using System.Text.Json;
 
 
 
@@ -14,21 +15,15 @@ var factory = new ConnectionFactory
 using var connection = await factory.CreateConnectionAsync();
 using var channel = await connection.CreateChannelAsync();
 
-await channel.ExchangeDeclareAsync("logs-topic", ExchangeType.Topic,durable: true);
-Random rnd = new Random();
-Enumerable.Range(1, 50).ToList().ForEach(async x =>
-{
-    LogNames log1 = (LogNames)rnd.Next(1, 5);
-    LogNames log2 = (LogNames)rnd.Next(1, 5);
-    LogNames log3 = (LogNames)rnd.Next(1, 5);
+await channel.ExchangeDeclareAsync("complex-type", ExchangeType.Topic,durable: true);
+var product = new Product { Id = 1, Name = "Kalem", Price = 10, Stock = 10 };
+var productJsonString= JsonSerializer.Serialize(product);
+var routeKey = "contextTypeTest";
 
-    var routeKey = $"{log1}.{log2}.{log3}";
-    string message = $"Log-type: {log1}-{log2}-{log3}";
-    var messageBody = Encoding.UTF8.GetBytes(message);
-    await channel.BasicPublishAsync( "logs-topic", routeKey, messageBody);
+var messageBody = Encoding.UTF8.GetBytes(productJsonString);
+    await channel.BasicPublishAsync("complex-type", routeKey, messageBody);
 
-    Console.WriteLine($"Log gönderildi: {message}");
-});
+    Console.WriteLine($"Mesaj gönderildi");
 
 
 Console.ReadLine();

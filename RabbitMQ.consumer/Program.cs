@@ -13,8 +13,15 @@ using var channel = await connection.CreateChannelAsync();
 
 await channel.BasicQosAsync(0, 1, false);
 var consumer = new AsyncEventingBasicConsumer(channel);
-var queueName = "direct-queue-Critical";
 
+//kuyruğu consumer tarafında oluşturduk.topic yapısında çok fazla seçenek olduğu için bu şekilde yaptık fakat senaryayo göre kuyruğun nerede oluşturulacağı değişiklik gösterebilir.
+var queueDeclareResult = await channel.QueueDeclareAsync();
+var queueName = queueDeclareResult.QueueName;
+
+//sadece ortası Error olanları almak için.
+var routeKey = "*.Error.*";
+
+channel.QueueBindAsync(queueName, "logs-topic", routeKey);
 
 await channel.BasicConsumeAsync(queueName, false, consumer);
 

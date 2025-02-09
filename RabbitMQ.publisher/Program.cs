@@ -14,22 +14,18 @@ var factory = new ConnectionFactory
 using var connection = await factory.CreateConnectionAsync();
 using var channel = await connection.CreateChannelAsync();
 
-await channel.ExchangeDeclareAsync("logs-direct", ExchangeType.Direct,durable: true);
-Enum.GetNames(typeof(LogNames)).ToList().ForEach(x =>
-{
-    var routeKey = $"route-{x}";
-    var queueName = $"direct-queue-{x}";
-    channel.QueueDeclareAsync(queueName, true, false, false);
-    channel.QueueBindAsync(queueName, "logs-direct", routeKey);
-});
-
+await channel.ExchangeDeclareAsync("logs-topic", ExchangeType.Topic,durable: true);
+Random rnd = new Random();
 Enumerable.Range(1, 50).ToList().ForEach(async x =>
 {
-    LogNames log = (LogNames)new Random().Next(1,5);
-    string message = $"Log-type: {log}";
+    LogNames log1 = (LogNames)rnd.Next(1, 5);
+    LogNames log2 = (LogNames)rnd.Next(1, 5);
+    LogNames log3 = (LogNames)rnd.Next(1, 5);
+
+    var routeKey = $"{log1}.{log2}.{log3}";
+    string message = $"Log-type: {log1}-{log2}-{log3}";
     var messageBody = Encoding.UTF8.GetBytes(message);
-    var routeKey = $"route-{log}";
-    await channel.BasicPublishAsync( "logs-direct", routeKey, messageBody);
+    await channel.BasicPublishAsync( "logs-topic", routeKey, messageBody);
 
     Console.WriteLine($"Log gönderildi: {message}");
 });

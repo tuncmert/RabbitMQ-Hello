@@ -10,15 +10,13 @@ var factory = new ConnectionFactory
 using var connection = await factory.CreateConnectionAsync();
 using var channel = await connection.CreateChannelAsync();
 
-//burada tekrar kuyruk oluşturmaya gerek yok fakat eğer publisher oluşturmadıysa buradan oluşturulabilir.
-await channel.QueueDeclareAsync("hello-queue", true, false, false);
 
-//true olursa girilen sayıyı toplam mesaj sayısı olarak gönderir, false olursa her bir consumera girilen sayı kadar sırayla gönderir.
 await channel.BasicQosAsync(0, 1, false);
 var consumer = new AsyncEventingBasicConsumer(channel);
+var queueName = "direct-queue-Critical";
 
-//mesaj geldiğinde hemen silinip silinmeyeği false-true
-await channel.BasicConsumeAsync("hello-queue", false, consumer);
+
+await channel.BasicConsumeAsync(queueName, false, consumer);
 
 consumer.ReceivedAsync += (model, ea) =>
 {
@@ -26,6 +24,10 @@ consumer.ReceivedAsync += (model, ea) =>
     var message = Encoding.UTF8.GetString(body);
     Thread.Sleep(1000);
     Console.WriteLine("Gelen mesaj: " + message);
+
+    //logları bir txt dosyasına kayıt için 
+    //File.AppendAllText("log-critical.txt", message + "\n");
+
 
     //artık mesajı silmesi için rabbitmqye gönderiyoruz
     channel.BasicAckAsync(ea.DeliveryTag, false);
